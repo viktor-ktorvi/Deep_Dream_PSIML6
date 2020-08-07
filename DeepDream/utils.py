@@ -29,7 +29,7 @@ def prepareImage(image):
     image = (image - normalizeMean) / normalizeStd
     image = np.swapaxes(image, 0, 2)
     image = np.swapaxes(image, 1, 2)
-    return image
+    return image[np.newaxis, :]
 
 
 def deprocess(image):
@@ -51,17 +51,82 @@ def createOctaves(image, octave_n, octave_scale, normalized=True):
     for i in range(octave_n - 1):
         h = np.int(octaves[-1].shape[0] / octave_scale)
         w = np.int(octaves[-1].shape[1] / octave_scale)
-        # DEBAG PRINTOVI
-        # print("h i w  = ", h, w)
-        # risajz = np.resize(octaves[-1], (h, w, 3))
-        #
-        # print ("Risajz\n", risajz)
+
         img = cv2.resize(octaves[-1], (w, h), interpolation=cv2.INTER_CUBIC)
         octaves.append(img)
-
 
     if normalized:
         for i in range(len(octaves)):
             octaves[i] = prepareImage(octaves[i])
 
     return octaves
+
+
+def next_step(img, model, device, target_layer_num=1, step_size=0.02, clip=True):
+    # img_tensor : current tensor to ascent
+    # model : chosen model
+    # target_layer_num : order of layer in model (1..end)
+    # step_size : learning rate
+    # clip : saturation of image pixels, makes sure that in the end they are 0..255
+    # init with current image
+    img_tensor = torch.tensor(img, requires_grad=True).to(device)
+    img_tensor.retain_grad()
+
+    target_layer_output = img_tensor
+    # forward to target layer
+    for i in range(target_layer_num):
+        target_layer_output = model.features[i](target_layer_output)
+
+    model.zero_grad()
+    target_layer_output.norm().backward()
+    gradient = img_tensor.grad
+
+    img_tensor += step_size * gradient / torch.mean(torch.abs(gradient))
+
+    img = img_tensor.to("cpu").detach().numpy()
+
+    # clipping
+    if clip:
+        mini = -normalizeMean / normalizeStd
+        maxi = (1 - normalizeMean) / normalizeStd
+        for i in range(3):
+            img[0, i, :] = np.clip(img[0, i, :], mini[i], maxi[i])
+
+    return img
+
+
+def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip):
+    octaves = createOctaves(image, octave_n, octave_scale, normalized=True)
+    image = prepareImage(image)
+
+    detail = np.zeros_like(octaves[-1])
+
+    octaves = octaves[::-1]
+    for i, octave in enumerate(octaves):
+        # print(octave.shape)
+        h, w = octave.shape[-2:]
+        print(octave.shape[-2:])
+
+        if i > 0:
+            h_next, w_next = octaves[i].shape[-2:]
+            detail = deprocess(detail)
+            # print(detail.shape)
+            detail = cv2.resize(detail, (w_next, h_next), interpolation=cv2.INTER_CUBIC)
+            detail = prepareImage(detail)
+
+        image = deprocess(image)
+        # print(image.shape)
+        image = cv2.resize(image, (w, h), interpolation=cv2.INTER_CUBIC)
+        image = prepareImage(image)
+
+        print("Image:\n", image.shape)
+        print("Octave\n", octave.shape)
+        print("Detail\n", detail.shape)
+        image = octave + detail
+
+        for j in range(iter_n):
+            image = next_step(image, model, device, target_layer_num, step_size, clip)
+
+        detail = image - octave
+
+    return deprocess(image)

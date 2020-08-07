@@ -19,40 +19,45 @@ if __name__ == "__main__":
     octaves = createOctaves(image, 4, 1.4, normalized=True)
     octave = octaves[-1]
     print(np.min(octave), np.max(octave))
-    imgTensor = torch.tensor(octave[np.newaxis, :], requires_grad=True).to(device)
+    imgTensor = torch.tensor(octave, requires_grad=True).to(device)
     imgTensor.retain_grad()
 
     # HERE DO JITTER!
 
     iter_n = 10
     target_layer_num = 15
-    step_size = 0.1
+    step_size = 0.2
+    clip = True
+    # for j in range(iter_n):
+    #     target_layer_output = imgTensor
+    #     # forward to target layer
+    #     for i in range(target_layer_num):
+    #         target_layer_output = model.features[i](target_layer_output)
+    #
+    #     model.zero_grad()
+    #     target_layer_output.norm().backward()
+    #     gradient = imgTensor.grad
+    #
+    #     imgTensor += step_size * gradient / torch.mean(torch.abs(gradient))
+    #
+    # imgGrad = imgTensor.to("cpu").detach().numpy()
+    #
+    # clip = False
+    # # clipping
+    # if clip:
+    #     mini = -normalizeMean / normalizeStd
+    #     maxi = (1 - normalizeMean) / normalizeStd
+    #     for i in range(3):
+    #         imgGrad[0, i, :] = np.clip(imgGrad[0, i, :], mini[i], maxi[i])
 
+    imgGrad = octave
     for j in range(iter_n):
-        target_layer_output = imgTensor
-        # forward to target layer
-        for i in range(target_layer_num):
-            target_layer_output = model.features[i](target_layer_output)
+        imgGrad = next_step(imgGrad, model, device, target_layer_num, step_size, clip)
 
-        model.zero_grad()
-        target_layer_output.norm().backward()
-        gradient = imgTensor.grad
-
-        imgTensor += step_size * gradient / torch.mean(torch.abs(gradient))
-
-    imgGrad = imgTensor.to("cpu").detach().numpy()
-
-    clip = False
-    # clipping
-    if clip:
-        mini = -normalizeMean / normalizeStd
-        maxi = (1 - normalizeMean) / normalizeStd
-        for i in range(3):
-            imgGrad[0, i, :] = np.clip(imgGrad[0, i, :], mini[i], maxi[i])
-
+    # imgGrad = imgTensor.to("cpu").detach().numpy()
     imgGrad = deprocess(imgGrad)
 
-    depOct = deprocess(octave[np.newaxis, :])
+    depOct = deprocess(octave)
     details = depOct - imgGrad
     plt.figure()
     plt.imshow(imgGrad)
