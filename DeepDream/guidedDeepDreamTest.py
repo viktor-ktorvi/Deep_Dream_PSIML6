@@ -45,12 +45,12 @@ if __name__ == "__main__":
     filename = "clock"
     extension = ".jpg"
     filepath = "data/input_images/"
-    guide = loadImage(filepath + filename + extension)
+    guide = load_image(filepath + filename + extension)
     guide = cv2.resize(guide, (200, 200))
-    guide = prepareImage(guide)
+    guide = preprocess(guide, "cuda")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = loadModel(device)
+    model = load_model(device)
     target_layer_num = 16
 
     guide_tensor = torch.tensor(guide, requires_grad=False).to(device)
@@ -60,9 +60,9 @@ if __name__ == "__main__":
     filename = "Maskenbal2018"
     extension = ".jpg"
     filepath = "data/input_images/"
-    image = loadImage(filepath + filename + extension)
+    image = load_image(filepath + filename + extension)
     # image = cv2.resize(image, (150, 150))
-    image = prepareImage(image)
+    image = preprocess(image, "cuda")
 
     img_tensor = torch.tensor(image, requires_grad=True).to(device)
     img_tensor.retain_grad()

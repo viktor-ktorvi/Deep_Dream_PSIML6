@@ -25,14 +25,14 @@ if __name__ == "__main__":
     image = img
 
     # SLIKA
-    image = loadImage('data/input_images/flamingo.jpg')
+    image = load_image('data/input_images/flamingo.jpg')
     image = cv2.resize(image, (1000, 1000))
 
     plt.figure()
     plt.imshow(image)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = loadModel(device)
+    model = load_model(device)
 
     iter_n = 6
     # sloj 30 za ptice
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     octave_n = 5
     octave_scale = 1.8
 
-    octaves = createOctaves(image, octave_n, octave_scale, normalized=True)
-    image = prepareImage(image)
+    octaves = create_octaves(image, octave_scale, )
+    image = preprocess(image, "cuda")
 
     detail = np.zeros_like(octaves[-1])
 
@@ -58,12 +58,12 @@ if __name__ == "__main__":
             detail = deprocess(detail)
             # print(detail.shape)
             detail = cv2.resize(detail, (w_next, h_next), interpolation=cv2.INTER_CUBIC)
-            detail = prepareImage(detail)
+            detail = preprocess(detail, "cuda")
 
         image = deprocess(image)
         # print(image.shape)
         image = cv2.resize(image, (w, h), interpolation=cv2.INTER_CUBIC)
-        image = prepareImage(image)
+        image = preprocess(image, "cuda")
 
         print("Image:\n", image.shape)
         print("Octave\n", octave.shape)
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         image = octave + detail
 
         for j in range(iter_n):
-            image = next_step(image, model, device, target_layer_num, step_size, clip)
+            image = next_step(image, model, target_layer_num, step_size, clip)
 
         detail = image - octave
 

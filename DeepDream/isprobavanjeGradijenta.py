@@ -12,11 +12,11 @@ from utils import *
 
 if __name__ == "__main__":
 
-    image = loadImage('data/input_images/Maskenbal2018.jpg')
+    image = load_image('data/input_images/Maskenbal2018.jpg')
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = loadModel(device)
+    model = load_model(device)
 
-    octaves = createOctaves(image, 4, 1.4, normalized=True)
+    octaves = create_octaves(image, 1.4, )
     octave = octaves[-1]
     print(np.min(octave), np.max(octave))
     imgTensor = torch.tensor(octave, requires_grad=True).to(device)
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     imgGrad = octave
     for j in range(iter_n):
-        imgGrad = next_step(imgGrad, model, device, target_layer_num, step_size, clip)
+        imgGrad = next_step(imgGrad, model, target_layer_num, step_size, clip)
 
     # imgGrad = imgTensor.to("cpu").detach().numpy()
     imgGrad = deprocess(imgGrad)

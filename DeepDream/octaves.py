@@ -12,13 +12,13 @@ from utils import *
 
 if __name__ == "__main__":
 
-    image = loadImage('data/input_images/pas.jpeg')
-    octaves = createOctaves(image, 4, 1.4)
+    image = load_image('data/input_images/pas.jpeg')
+    octaves = create_octaves(image, 1.4, )
     for i in octaves:
         print(i.shape)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = loadModel(device)
+    model = load_model(device)
 
     imgTensor = torch.tensor(octaves[-1][np.newaxis, :], requires_grad=True).to(device)
     imgTensor.retain_grad()

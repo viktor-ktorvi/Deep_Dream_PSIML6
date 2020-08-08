@@ -50,10 +50,10 @@ def next_step_test(img, guided_features, model, device, target_layer_num=1, step
 
 
 def deep_dream_test(image, guide, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip):
-    octaves = createOctaves(image, octave_n, octave_scale, normalized=True)
-    image = prepareImage(image)
+    octaves = create_octaves(image, octave_scale, )
+    image = preprocess(image, "cuda")
 
-    guide = prepareImage(guide)
+    guide = preprocess(guide, "cuda")
     guided_features = torch.tensor(guide, requires_grad=False).to(device)
 
     guided_features = propagate(guided_features, model, target_layer_num)
@@ -69,12 +69,12 @@ def deep_dream_test(image, guide, model, device, octave_n, octave_scale, iter_n,
             detail = deprocess(detail)
             # print(detail.shape)
             detail = cv2.resize(detail, (w_next, h_next), interpolation=cv2.INTER_CUBIC)
-            detail = prepareImage(detail)
+            detail = preprocess(detail, "cuda")
 
         image = deprocess(image)
         # print(image.shape)
         image = cv2.resize(image, (w, h), interpolation=cv2.INTER_CUBIC)
-        image = prepareImage(image)
+        image = preprocess(image, "cuda")
 
         image = octave + detail
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     filename = "Maskenbal2018"
     extension = ".jpg"
     filepath = "data/input_images/"
-    image = loadImage(filepath + filename + extension)
+    image = load_image(filepath + filename + extension)
     image = cv2.resize(image, (1000, 1000))
 
     filename = "noise"
@@ -111,9 +111,9 @@ if __name__ == "__main__":
     plt.figure()
     plt.imshow(image)
 
-    guide = loadImage(filepath + "clock.jpg")
+    guide = load_image(filepath + "clock.jpg")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = loadModel(device)
+    model = load_model(device)
 
     iter_n = 10
     # sloj 30 za ptice
