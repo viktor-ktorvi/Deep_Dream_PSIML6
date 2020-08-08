@@ -20,24 +20,31 @@ if __name__ == "__main__":
     img = 255.0 / 2.0 + 255.0 / 6 * np.random.randn(n, n, 3)
     img = np.clip(img, 0, 255)
     img = img.astype(np.uint8)
-    print(np.max(img), np.min(img))
-    print(img)
-    image = img
+
+    noise_img = img
 
     # SLIKA
-    image = loadImage('data/input_images/flamingo.jpg')
-    image = cv2.resize(image, (1000, 1000))
+    filename = "Maskenbal2018"
+    extension = ".jpg"
+    filepath = "data/input_images/"
+    image = loadImage(filepath + filename + extension)
+    # image = cv2.resize(image, (1000, 1000))
+
+    filename = "noise"
+    # image = noise_img
 
     plt.figure()
     plt.imshow(image)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     model = loadModel(device)
 
-    iter_n = 6
+    iter_n = 10
     # sloj 30 za ptice
-    target_layer_num = 21
-    step_size = 0.08
+    # sloj 16 krugovi
+    target_layer_num = 30
+    step_size = 0.04
     clip = True
     octave_n = 5
     octave_scale = 1.8
@@ -46,4 +53,9 @@ if __name__ == "__main__":
 
     plt.figure()
     plt.imshow(image)
+    im = Image.fromarray(image)
+    outpath = "data/fun_figures/"
+    im.save(outpath + filename + "_iter_n_" + str(iter_n) + "_layer_" + str(target_layer_num) + "_step_" + str(step_size) + "_octave_n_" + str(octave_n) + "_octave_scale_" + str(octave_scale) +".jpeg")
     plt.show()
+
+
