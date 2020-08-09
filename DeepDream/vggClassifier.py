@@ -19,16 +19,13 @@ def predictVGG16(filename, topN=10):
     labels = {int(key): value for key, value in response.json().items()}
 
     image = load_image(filename)
-    image_tensor = preprocess(image, "cuda")
+    image_tensor = preprocess(image, device)
 
     with torch.no_grad():
         prediction = model(image_tensor)
 
-    # listOfPredisctions = prediction.tolist()
-    # listOfProbabilities = torch.nn.functional.softmax(prediction, dim=0)
-
-    prediction = torch.nn.functional.softmax(prediction.data.numpy(), dim=1)
-
+    # prediction = torch.nn.functional.softmax(prediction.data.numpy(), dim=1)
+    prediction = prediction.cpu().numpy()
     indexes = np.argsort(prediction)
 
     print("N\t", "Score\t\t", "Class\n")
@@ -37,7 +34,7 @@ def predictVGG16(filename, topN=10):
 
 
 if __name__ == "__main__":
-    predictVGG16('data/input_images/MaskenbalViktor.jpeg', 10)
+    predictVGG16('data/cats/noise_iter_n_10_layer_25_step_0.04_octave_n_5_octave_scale_1.8.jpg', 10)
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # model = load_model()
     #

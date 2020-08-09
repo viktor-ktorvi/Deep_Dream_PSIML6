@@ -82,7 +82,7 @@ def propagate(img_tensor, model, target_layer_num):
     return target_layer_output
 
 
-def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True):
+def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, guided=False, guide_features=None):
     # img_tensor : current tensor to ascent
     # model : chosen model
     # target_layer_num : order of layer in model (1..end)
@@ -93,13 +93,19 @@ def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True):
 
     # forward img to target layer
     target_layer_output = propagate(img_tensor, model, target_layer_num)
-    torch.autograd.set_detect_anomaly(True)
     model.zero_grad()
-    target_layer_output.norm().backward()
-    gradient = img_tensor.grad
 
-    # print(type(gradient), type(img_tensor))
-    img_tensor += step_size * gradient / torch.mean(torch.abs(gradient))
+    if guided:
+        guided_gram = gram_matrix(guide_features)
+        target_gram = gram_matrix(target_layer_output)
+        (guided_gram - target_gram).norm().backward(retain_graph=True)
+        # torch.nn.MSELoss(reduction='mean')(guided_gram, target_gram).backward(retain_graph=True)
+        gradient = img_tensor.grad
+        img_tensor -= step_size * gradient / torch.mean(torch.abs(gradient))
+    else:
+        target_layer_output.norm().backward()
+        gradient = img_tensor.grad
+        img_tensor += step_size * gradient / torch.mean(torch.abs(gradient))
 
     if clip:
         mini = -normalizeMean / normalizeStd
@@ -110,9 +116,15 @@ def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True):
     return img_tensor
 
 
-def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip):
+def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip, guided=False,
+               guide=None):
     img_tensor = preprocess(image, device)
-    # img_tensor.retain_grad()
+    if guided:
+        guide = preprocess(guide, device)
+        guided_features = propagate(guide, model, target_layer_num)
+    else:
+        guided_features = None
+
     octaves = create_octaves(img_tensor, octave_n, octave_scale)
 
     detail = torch.zeros_like(octaves[-1], requires_grad=True)
@@ -131,8 +143,22 @@ def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_laye
         img_tensor = octave + detail
 
         for j in range(iter_n):
-            img_tensor = next_step(img_tensor, model, target_layer_num, step_size, clip)
+            img_tensor = next_step(img_tensor, model, target_layer_num, step_size, clip, guided, guided_features)
 
         detail = img_tensor - octave
 
     return deprocess(img_tensor)
+
+
+def gram_matrix(input_tensor):
+    a, b, c, d = input_tensor.size()  # a=batch size(=1)
+    # b=number of feature maps
+    # (c,d)=dimensions of a f. map (N=c*d)
+
+    features = input_tensor.view(a * b, c * d)  # resise F_XL into \hat F_XL
+
+    G = torch.mm(features, features.t())  # compute the gram product
+
+    # we 'normalize' the values of the gram matrix
+    # by dividing by the number of element in each feature maps.
+    return G.div(a * b * c * d)

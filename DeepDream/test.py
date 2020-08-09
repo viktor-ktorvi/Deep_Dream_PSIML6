@@ -1,23 +1,4 @@
 from utils import *
-from scipy.ndimage import gaussian_filter
-
-import torch.nn as nn
-
-
-def gaussian(M, std, sym=True):
-
-    odd = M % 2
-    if not sym and not odd:
-        M = M + 1
-    n = torch.arange(0, M) - (M - 1.0) / 2.0
-    sig2 = 2 * std * std
-    w = torch.exp(-n ** 2 / sig2)
-    if not sym and not odd:
-        w = w[:-1]
-
-    print(w)
-    print(w.shape)
-    return w
 
 
 if __name__ == "__main__":
@@ -42,11 +23,12 @@ if __name__ == "__main__":
 
     img_tensor = preprocess(image, device)
 
-    conv = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=264, bias=False)
-    with torch.no_grad():
-        conv.weight = nn.Parameter(gaussian(5, 1))
+    target_layer_num = 11
+    features = propagate(img_tensor, model, target_layer_num)
 
-    img_tensor = conv(img_tensor)
+    gram = gram_matrix(features)
+    print(gram.shape)
+
 
     image = deprocess(img_tensor)
     plt.figure()

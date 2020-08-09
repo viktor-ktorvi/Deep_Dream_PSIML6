@@ -53,7 +53,7 @@ if __name__ == "__main__":
     model = load_model(device)
     target_layer_num = 16
 
-    guide_tensor = torch.tensor(guide, requires_grad=False).to(device)
+    guide_tensor = guide
     guide_features = propagate(guide_tensor, model, target_layer_num)
     guide_features = guide_features[0]
 
@@ -64,19 +64,23 @@ if __name__ == "__main__":
     # image = cv2.resize(image, (150, 150))
     image = preprocess(image, "cuda")
 
-    img_tensor = torch.tensor(image, requires_grad=True).to(device)
+    img_tensor = image
     img_tensor.retain_grad()
     target_layer_output = propagate(img_tensor, model, target_layer_num)
 
-    x = target_layer_output[0].data.cpu().numpy()
-    y = guide_features.data.cpu().numpy()
-    ch = x.shape[0]
-    x = x.reshape(ch, -1)
-    y = y.reshape(ch, -1)
-    A = x.T.dot(y)
-    z = y[:, A.argmax(1)]
-    print(target_layer_output)
 
+
+    # x = target_layer_output[0].data.cpu().numpy()
+    # y = guide_features.data.cpu().numpy()
+    # ch = x.shape[0]
+    # c, h, w = target_layer_output[0].size()
+    # print(c, h, w)
+    # x = x.reshape(ch, -1)
+    # y = y.reshape(ch, -1)
+    # A = x.T.dot(y)
+    # z = y[:, A.argmax(1)]
+    # a = torch.from_numpy(target_layer_output[:, A.argmax(1)].reshape(c, h, w)).unsqueeze(0).type(torch.FloatTensor)
+    # print(a)
 
     # iter_n = 10
     # step_size = 0.04
