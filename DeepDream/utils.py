@@ -36,7 +36,7 @@ def preprocess(image, device):
     # mozda tensor = torch.tensor(image[np.newaxis, :], requires_grad=True)
     # tensor = tensor.to(device)
     # return tensor
-    return torch.tensor(image[np.newaxis, :], requires_grad=True).to(device)
+    return torch.tensor(image[np.newaxis, :], requires_grad=True, device=device)
 
 
 # treba promeniti
@@ -132,6 +132,7 @@ def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, 
 def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip, guided=False,
                guide=None, blur=True):
     img_tensor = preprocess(image, device)
+
     if guided:
         guide = preprocess(guide, device)
         guided_features = propagate(guide, model, target_layer_num)
@@ -148,16 +149,14 @@ def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_laye
 
         if i > 0:
             h_next, w_next = octaves[i].shape[-2:]
-            # detail = (F.adaptive_avg_pool2d(Variable(detail), (h_next, w_next))).data
             detail = resize_tensor(detail, h_next, w_next)
 
-        # img_tensor = (F.adaptive_avg_pool2d(Variable(img_tensor), (h, w))).data
         img_tensor = resize_tensor(img_tensor, h, w)
         img_tensor = octave + detail
 
         for j in range(iter_n):
             sigma = (i * 4.0) / iter_n + 0.5
-            # sigma = 1
+            sigma = 1
             img_tensor = next_step(img_tensor, model, target_layer_num, step_size, clip, guided, guided_features, blur,
                                    sigma)
 
