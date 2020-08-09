@@ -9,9 +9,9 @@ from matplotlib import pyplot as plt
 import torchvision.transforms as transforms
 from skimage.transform import resize
 from utils import *
+from datetime import datetime
 
 if __name__ == "__main__":
-
     # va visim slojevima
     # kada radimo sa abgs slikom kao da levi gornji cosak uvek pojacava a donji desni nikad! Pitati aleksu
 
@@ -24,12 +24,12 @@ if __name__ == "__main__":
     noise_img = img
 
     # SLIKA
-    filename = "clouds"
+    filename = "Maskenbal2018"
     extension = ".jpg"
     filepath = "data/input_images/"
     image = load_image(filepath + filename + extension)
 
-    guide = load_image(filepath + "owl2.jpg")
+    guide = load_image(filepath + "cat.jpg")
     scale = 3
     h = round(guide.shape[0] / scale)
     w = round(guide.shape[1] / scale)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     scale = 2.5
     h = round(image.shape[0] / scale)
     w = round(image.shape[1] / scale)
-    #image = cv2.resize(image, (w, h))
+    # image = cv2.resize(image, (w, h))
 
     # filename = "noise"
     # image = noise_img
@@ -50,19 +50,22 @@ if __name__ == "__main__":
 
     model = load_model(device)
 
-    iter_n = 15
-    target_layer_num = 29
+    iter_n = 10
+    target_layer_num = 28
     step_size = 0.04
     clip = True
     octave_n = 5
     octave_scale = 1.8
     guided = True
+    blur = True
 
-    image = deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip, guided, guide)
+    print(type(model.features[target_layer_num - 1]))
+    image = deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip,
+                       guided=guided, guide=guide, blur=blur)
     plt.figure()
     plt.imshow(image)
 
-    #cat
+    # cat
     # img_copy = image
     # for i in range(14,len(model.features)):
     #     image = deep_dream(img_copy, model, device, octave_n, octave_scale, iter_n, i, step_size, clip)
@@ -74,8 +77,10 @@ if __name__ == "__main__":
 
     im = Image.fromarray(image)
     outpath = "data/fun_figures/"
-    im.save(outpath + filename + "_iter_n_" + str(iter_n) + "_layer_" + str(target_layer_num) + "_step_" + str(step_size) + "_octave_n_" + str(octave_n) + "_octave_scale_" + str(octave_scale) +".jpg")
+    dateTimeObj = datetime.now()
+    vreme = str(dateTimeObj.hour) + '_' + str(dateTimeObj.minute) + '_' + str(dateTimeObj.second)
+    im.save(outpath + filename + "_iter_n_" + str(iter_n) + "_layer_" + str(target_layer_num) + "_step_" + str(
+        step_size) + "_octave_n_" + str(octave_n) + "_octave_scale_" + str(octave_scale) + "_blur_" + str(
+        blur) + "_vreme_" + vreme + ".jpg")
 
     plt.show()
-
-

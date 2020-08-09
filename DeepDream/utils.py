@@ -82,13 +82,9 @@ def propagate(img_tensor, model, target_layer_num):
     return target_layer_output
 
 
-def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, guided=False, guide_features=None):
-    # img_tensor : current tensor to ascent
-    # model : chosen model
-    # target_layer_num : order of layer in model (1..end)
-    # step_size : learning rate
-    # clip : saturation of image pixels, makes sure that in the end they are 0..255
-    # init with current image
+def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, guided=False, guide_features=None,
+              blur=True, sigma=1):
+
     img_tensor.retain_grad()
 
     # forward img to target layer
@@ -99,12 +95,29 @@ def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, 
         guided_gram = gram_matrix(guide_features)
         target_gram = gram_matrix(target_layer_output)
         (guided_gram - target_gram).norm().backward(retain_graph=True)
-        # torch.nn.MSELoss(reduction='mean')(guided_gram, target_gram).backward(retain_graph=True)
-        gradient = img_tensor.grad
-        img_tensor -= step_size * gradient / torch.mean(torch.abs(gradient))
     else:
         target_layer_output.norm().backward()
-        gradient = img_tensor.grad
+
+    gradient = img_tensor.grad
+    if blur:
+        gradient = gradient.cpu().detach().numpy()
+        # (gradient, sigma=(0.0, 0.0, sigma, sigma))
+        grad_smooth1 = gaussian_filter(gradient, sigma=(0.0, 0.0, sigma, sigma))
+        grad_smooth2 = gaussian_filter(gradient, sigma=(0.0, 0.0, sigma*2, sigma*2))
+        grad_smooth3 = gaussian_filter(gradient, sigma=(0.0, 0.0, sigma*0.5, sigma*0.5))
+
+        # grad_smooth1 = gaussian_filter(gradient, sigma=sigma)
+        # grad_smooth2 = gaussian_filter(gradient, sigma=sigma * 2)
+        # grad_smooth3 = gaussian_filter(gradient, sigma=sigma * 0.5)
+
+        gradient = (grad_smooth1 + grad_smooth2 + grad_smooth3)
+
+        gradient = gaussian_filter(gradient, sigma)
+        gradient = torch.tensor(gradient).to("cuda")
+
+    if guided:
+        img_tensor -= step_size * gradient / torch.mean(torch.abs(gradient))
+    else:
         img_tensor += step_size * gradient / torch.mean(torch.abs(gradient))
 
     if clip:
@@ -117,7 +130,7 @@ def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, 
 
 
 def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_layer_num, step_size, clip, guided=False,
-               guide=None):
+               guide=None, blur=True):
     img_tensor = preprocess(image, device)
     if guided:
         guide = preprocess(guide, device)
@@ -143,7 +156,10 @@ def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_laye
         img_tensor = octave + detail
 
         for j in range(iter_n):
-            img_tensor = next_step(img_tensor, model, target_layer_num, step_size, clip, guided, guided_features)
+            sigma = (i * 4.0) / iter_n + 0.5
+            # sigma = 1
+            img_tensor = next_step(img_tensor, model, target_layer_num, step_size, clip, guided, guided_features, blur,
+                                   sigma)
 
         detail = img_tensor - octave
 
