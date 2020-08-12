@@ -5,4 +5,4 @@ Barbara i Viktor pokusavaju da realiziju deep dream projekat u kratkom vremensko
 P.S.
 Jedini bitni fajlovi su main.py i utils.py, ostalo je debagovanje.
 
-S ljubavlji, autori.
+S ljubavlju, autori.
