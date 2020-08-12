@@ -1,13 +1,8 @@
 import torch
 import numpy as np
-import cv2
 from PIL import Image
 import torchvision.models as models
 from scipy.ndimage.filters import gaussian_filter
-import requests
-from matplotlib import pyplot as plt
-import torchvision.transforms as transforms
-from skimage.transform import resize
 
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -113,7 +108,7 @@ def next_step(img_tensor, model, target_layer_num=1, step_size=0.02, clip=True, 
         gradient = (grad_smooth1 + grad_smooth2 + grad_smooth3)
 
         gradient = gaussian_filter(gradient, sigma)
-        gradient = torch.tensor(gradient).to("cuda")
+        gradient = torch.tensor(gradient).to(img_tensor.device)
 
     if guided:
         img_tensor -= step_size * gradient / torch.mean(torch.abs(gradient))
@@ -159,6 +154,7 @@ def deep_dream(image, model, device, octave_n, octave_scale, iter_n, target_laye
             sigma = 1
             img_tensor = next_step(img_tensor, model, target_layer_num, step_size, clip, guided, guided_features, blur,
                                    sigma)
+
 
         detail = img_tensor - octave
 

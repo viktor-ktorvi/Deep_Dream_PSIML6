@@ -7,6 +7,7 @@ import torchvision.models as models
 import requests
 from matplotlib import pyplot as plt
 import torchvision.transforms as transforms
+from scipy.special import softmax
 from utils import *
 
 
@@ -26,15 +27,17 @@ def predictVGG16(filename, topN=10):
 
     # prediction = torch.nn.functional.softmax(prediction.data.numpy(), dim=1)
     prediction = prediction.cpu().numpy()
+    soft_val = softmax(prediction[0])
     indexes = np.argsort(prediction)
 
     print("N\t", "Score\t\t", "Class\n")
     for i in range(1, topN):
-        print(i, "\t", prediction[0, indexes[0, -i]], "\t", labels[indexes[0, -i]])
+        # print(i, "\t", prediction[0, indexes[0, -i]], "\t", labels[indexes[0, -i]])
+        print(i, "\t", soft_val[indexes[0, -i]], "\t", labels[indexes[0, -i]])
 
 
 if __name__ == "__main__":
-    predictVGG16('data/cats/noise_iter_n_10_layer_25_step_0.04_octave_n_5_octave_scale_1.8.jpg', 10)
+    predictVGG16('data/input_images/Maskenbal2018.jpg', 10)
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # model = load_model()
     #
